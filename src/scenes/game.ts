@@ -1,7 +1,6 @@
 import Phaser, { Tweens } from "phaser";
 export  class Game extends Phaser.Scene {
     constructor(){
-        console.log('@@@@@@@@')
         super('game')
     }
   greenBalls: any;
@@ -23,16 +22,14 @@ export  class Game extends Phaser.Scene {
   checkBall: any;
   score: any = 0;
   scoreBoard: any;
-  gameOver: any = false;
   bestScore: any = 0;
-  check:any = this.gameWidth*0.8;
-  speed:any = 1000;
+  speed:any = 1200;
   randomenemyPosition:any;
   number:any
   preload() {
     this.load.image('enemy','./assets/enemy.png')
     this.load.audio('collect','./assets/collect.wav')
-    this.load.audio('over','./assets/over.wav')
+    this.load.audio('over','./assets/over.wav') 
     this.randomenemyPosition = [this.gameWidth*0.15,this.gameWidth*0.5,this.gameWidth*0.85]
     this.scene.stop('welcomePage')
     localStorage.getItem('bestScore') == null ? this.bestScore = 0: 
@@ -48,139 +45,36 @@ export  class Game extends Phaser.Scene {
     this.yellowBalls = this.physics.add.group();
   }
   create() {
-    this.BallGenerator(this.colorsPicker[0]);
-    this.BallGenerator(this.colorsPicker[1]);
-    this.BallGenerator(this.colorsPicker[2]);
-    this.orangeButton = this.add
-      .circle(this.gameWidth * 0.5, this.gameHeight * 0.87, 30, 0xFE804E)
-      .setInteractive()
-      .on("pointerdown", () => {
-        this.orangeBalls.getChildren().forEach((orange: any) => {
-          this.checkBall = orange;
-          this.tweens.add({
-            targets: orange,
-            alpha: 1,
-            props: {
-              x: { value: this.gameWidth * 0.5, duration: 500 },
-              y: {
-                value: this.gameHeight * 0.87,
-                duration: 500,
-                ease: Phaser.Math.Easing.Quadratic.InOut,
-              },
-            },
-            repeat: 1,
-            yoyo: true,
-          }).play;
-          this.time.addEvent({
-            delay: 500, // ms
-            callback: () => {3
-              this.score++;
-              this.scoreBoard.setText("Score: " + this.score);
-              orange.destroy();            },
-            //args: [],
-          });
-        });
-      })
-      .on("pointerup", () => {
-        this.sound.play('collect')
-        this.time.addEvent({
-          delay: 600, // 
-        callback: () => {
-          this.BallGenerator(this.colorsPicker[0])
-        },
-      });
-      });
-    this.yellowButton = this.add
-      .circle(this.gameWidth * 0.15, this.gameHeight * 0.87, 30, 0xFED43C)
-      .setInteractive()
-      .on("pointerdown", () => {
-        this.yellowBalls.getChildren().forEach((yellow: any) => {
-          this.tweens.add({
-            targets: yellow,
-            alpha: 1,
-            props: {
-              x: { value: this.gameWidth * 0.15, duration: 500 },
-              y: {
-                value: this.gameHeight * 0.87,
-                duration: 500,
-              },
-            },
-            repeat: 1,
-            yoyo: true,
-          }).play;
-          this.time.addEvent({
-            delay: 500, // ms
-            callback: () => {
-              this.score++;
-              this.scoreBoard.setText("Score: " + this.score);
-              yellow.destroy();
-            },
-            //args: [],
-          });
-        });
-      })
-      .on("pointerup", () => {
-        this.sound.play('collect')
-        this.time.addEvent({
-          delay: 600, // 
-        callback: () => {
-          this.BallGenerator(this.colorsPicker[1])
-        },
-      });
-    });
-    this.greenButton = this.add
-      .circle(this.gameWidth * 0.85, this.gameHeight * 0.87, 30, 0x17DC9B)
-      .setInteractive()
-      .on("pointerdown", () => {
-        this.greenBalls.getChildren().forEach((green: any) => {
-          this.tweens.add({
-            targets: green,
-            alpha: 1,
-            props: {
-              x: { value: this.gameWidth * 0.85  , duration: 500 },
-              y: {
-                value: this.gameHeight * 0.87,
-                duration: 500,
-              },
-            },
-            repeat: 1,
-            yoyo: true,
-          }).play;
-          this.time.addEvent({
-            delay: 500, // ms
-            callback: () => {
-              this.score++;
-              this.scoreBoard.setText("Score: " + this.score);
-              green.destroy();
-            },
-            //args: [],
-          });
-        });
-      })
-      .on("pointerup", () => {
-        this.sound.play('collect')
-        this.time.addEvent({
-          delay: 600, // 
-        callback: () => {
-          this.BallGenerator(this.colorsPicker[2])
-        },
-      });
-      });
+    this.ballsGenerator(this.colorsPicker[0]);
+    this.ballsGenerator(this.colorsPicker[1]);
+    this.ballsGenerator(this.colorsPicker[2]);
+    this.orangeButton= this.createButton(this.colorsPicker[0],this.gameWidth * 0.5)
+    this.yellowButton= this.createButton(this.colorsPicker[1],this.gameWidth * 0.15)
+    this.greenButton= this.createButton(this.colorsPicker[2],this.gameWidth * 0.85)
     this.enemy = this.add.image(
       this.yellowButton.x,
       this.gameHeight * 0.78,'enemy'
     ).setScale(0.3);
     this.physics.add.existing(this.enemy);
     this.enemyTween(this.enemy,800)
-    this.physics.add.collider(this.enemy, this.yellowBalls, (a, b) => {
-      this.gameOver = true;
+    this.checkCollision(this.enemy,this.greenBalls)
+    this.checkCollision(this.enemy,this.orangeBalls)
+    this.checkCollision(this.enemy,this.yellowBalls)
+    this.scoreCard()
+    this.time.addEvent({
+      delay: 1500,
+     repeat:-1,
+      callback: () => {
+        this.ballsGenerator(this.colorsPicker[this.randomNumberPic(0, 2)]);       
+      },
     });
-    this.physics.add.collider(this.enemy, this.orangeBalls, (a, b) => {
-      this.gameOver = true;
+  }
+  checkCollision(sprite1:any,sprite2:any){
+    this.physics.add.collider(sprite1, sprite2, (a, b) => {
+      this.gameEnd()
     });
-    this.physics.add.collider(this.enemy, this.greenBalls, (a, b) => {
-      this.gameOver = true;
-    });
+  }
+  scoreCard(){
     this.scoreBoard = this.add.text(this.gameWidth / 2,
       this.gameHeight * 0.02, "Score: 0", {
       fontSize: "40px",
@@ -191,7 +85,7 @@ export  class Game extends Phaser.Scene {
     .setColor("#000000")
     .setOrigin(0.5, 0);
   }
-  BallGenerator(color: string) {
+  ballsGenerator(color: string) {
     for (var i = 0; i < this.randomNumberPic(10, 15); i++) {
       var ball = this.add.circle(
       this.number[this.randomNumberPic(0,1)],
@@ -199,7 +93,7 @@ export  class Game extends Phaser.Scene {
         10,
         this.colour.get(color)
       );
-      this.physics.add.existing(ball);
+     // this.physics.add.existing(ball);
       this.ballsTween(ball)
       if (color == "yellow") {
         this.yellowBalls.add(ball);
@@ -210,56 +104,9 @@ export  class Game extends Phaser.Scene {
       }
     }
   }
-  checkOverlap(spriteA: any, spriteB: any) {
-    return Phaser.Geom.Intersects.CircleToCircle(spriteA, spriteB);
-  }
-  update(time: any, delta: any) {
-    this.enemy.angle+=5
-    this.timer += delta;
-    while (this.timer > this.randomNumberPic(3000, 5000)) {
-      this.resources += 1;
-      this.timer -= this.randomNumberPic(3000, 5000);
-      this.BallGenerator(this.colorsPicker[this.randomNumberPic(0, 2)]);
-    }
-    if (this.gameOver) {
-      this.sound.stopByKey('collect')
-      this.sound.play('over')
-      const style = {
-        font: "32px Monospace",
-        fill: "#fffff",
-        // align: "center",
-      };
-      this.scene.pause()
-     // this.scene.start('welcomePage',{ score: this.score })
-      this.bestScore < this.score ?  localStorage.setItem('bestScore',this.score): null
-      this.add
-      .text(this.gameWidth / 2, this.gameHeight / 2, "Game Over")
-      .setFontSize(60)
-      .setColor("#000000")
-      .setFontStyle("bold")
-      .setFontFamily("Zekton")
-      .setOrigin(0.5);
-    setTimeout(() => {
-      this.scene.start("welcomePage", {
-        score: this.score,
-        isGameOver: true,
-      });
-      this.scene.remove("game");
-    }, 1000);
-    }
-    if (
-      this.gameOver &&
-      (this.input.activePointer.isDown || this.input.pointer1.isDown)
-    ) {
-      this.score = 0;
-      this.gameOver = false;
-      this.scene.restart();
-    }
-  }
   ballsTween(ball:any){
     this.tweens.add({
       targets: ball,
-  //    alpha: 1,
       onComplete:()=>{
         this.ballsTween(ball)
       },
@@ -273,8 +120,6 @@ export  class Game extends Phaser.Scene {
           duration: this.randomNumberPic(1400, 1500)
         },
       },
-      // repeat: 1,
-      // yoyo: true,
     }).play;
   }
   enemyTween(enemy:any,duration:any){
@@ -286,7 +131,7 @@ export  class Game extends Phaser.Scene {
     tween = this.tweens.add({
       targets: enemy,
       onComplete:()=>{
-        this.enemyTween(enemy,this.randomNumberPic(1200,1500))
+        this.enemyTween(enemy,this.randomNumberPic(this.speed,this.speed+300))
       },
       props: {
         x: {
@@ -298,5 +143,83 @@ export  class Game extends Phaser.Scene {
   }
   randomNumberPic(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  gameEnd(){
+      this.sound.stopByKey('collect')
+      this.sound.play('over')
+      this.scene.pause()
+      this.bestScore < this.score ?  localStorage.setItem('bestScore',this.score): null
+      this.add
+      .text(this.gameWidth / 2, this.gameHeight / 2, "Game Over")
+      .setFontSize(60)
+      .setColor("#000000")
+      .setFontStyle("bold")
+      .setFontFamily("Zekton")
+      .setOrigin(0.5);
+       setTimeout(() => {
+        this.scene.start("welcomePage", {
+        score: this.score,
+        isGameOver: true,
+      });
+      this.scene.remove("game");
+    }, 1000);
+  }
+  clickEvent(colorBalls:any,xAxis:number){
+    var scror = 0;
+    colorBalls.getChildren().forEach((ball: any) => {
+      scror++;
+      this.tweens.add({
+        targets: ball,
+        alpha: 1,
+        props: {
+          x: { value: xAxis, duration: 500 },
+          y: {
+            value: this.gameHeight * 0.87,
+            duration: 500,
+          },
+        },
+        repeat: 1,
+        yoyo: true,
+      }).play;
+      this.time.addEvent({
+        delay: 500, // ms
+        callback: () => {
+          this.score++;
+          this.scoreBoard.setText("Score: " + this.score);
+          ball.destroy();
+        },
+        //args: [],
+      });
+    });
+    this.speed -= scror/2 
+  }
+  createButton(color:string,xPosition:number){
+    var button = this.add
+    .circle(xPosition, this.gameHeight * 0.87, 30, this.colour.get(color))
+    .setInteractive()
+    .on("pointerdown", () => {
+      switch(color){  
+  
+        case 'orange':  
+              this.clickEvent(this.orangeBalls,xPosition)
+            break; 
+        case 'yellow':  
+            this.clickEvent(this.yellowBalls,xPosition)
+            break;            
+        default:  
+            this.clickEvent(this.greenBalls,xPosition)
+            break;  
+        }  
+    })
+    .on("pointerup", () => {
+      this.sound.play('collect')
+      this.time.addEvent({
+        delay: 600, // 
+        callback: () => {
+        this.ballsGenerator(color)
+      },
+    });
+   });
+    return button;
   }
 }
